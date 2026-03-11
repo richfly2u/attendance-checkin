@@ -2,18 +2,14 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>員工執勤打卡</title>
     <script src="https://static.line-scdn.net/liff/edge/2.1/sdk.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
@@ -21,17 +17,17 @@
             align-items: center;
             padding: 20px;
         }
-        
+
         .container {
             background: white;
-            border-radius: 20px;
-            padding: 40px 30px;
+            border-radius: 24px;
+            padding: 36px 28px;
             width: 100%;
             max-width: 400px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 24px 64px rgba(0,0,0,0.25);
             text-align: center;
         }
-        
+
         .logo {
             width: 80px;
             height: 80px;
@@ -41,312 +37,305 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
             font-size: 36px;
+            box-shadow: 0 8px 24px rgba(102,126,234,0.4);
         }
-        
-        h1 {
-            color: #333;
-            font-size: 24px;
-            margin-bottom: 10px;
+
+        h1 { color: #1a1a2e; font-size: 24px; margin-bottom: 6px; font-weight: 700; }
+
+        .subtitle { color: #888; font-size: 13px; margin-bottom: 28px; }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 2px solid #667eea;
+            margin: 0 auto 8px;
+            display: none;
+            object-fit: cover;
         }
-        
-        .subtitle {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 30px;
-        }
-        
+
         .info-box {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 20px;
+            background: #f7f8fc;
+            border-radius: 14px;
+            padding: 18px 20px;
             margin-bottom: 20px;
             text-align: left;
+            border: 1px solid #edf0fb;
         }
-        
+
         .info-item {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 12px;
+            align-items: center;
+            padding: 8px 0;
             font-size: 14px;
+            border-bottom: 1px solid #eee;
         }
-        
-        .info-item:last-child {
-            margin-bottom: 0;
-        }
-        
-        .info-label {
-            color: #666;
-        }
-        
-        .info-value {
-            color: #333;
-            font-weight: 600;
-        }
-        
+
+        .info-item:last-child { border-bottom: none; }
+
+        .info-label { color: #888; }
+
+        .info-value { color: #222; font-weight: 600; text-align: right; max-width: 60%; word-break: break-all; }
+
         .btn-checkin {
             width: 100%;
-            padding: 18px;
+            padding: 17px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 12px;
-            font-size: 18px;
-            font-weight: 600;
+            border-radius: 14px;
+            font-size: 17px;
+            font-weight: 700;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            letter-spacing: 2px;
+            transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+            box-shadow: 0 6px 20px rgba(102,126,234,0.35);
         }
-        
-        .btn-checkin:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
-        }
-        
+
+        .btn-checkin:active:not(:disabled) { transform: scale(0.97); }
+
         .btn-checkin:disabled {
             background: #ccc;
             cursor: not-allowed;
+            box-shadow: none;
         }
-        
+
         .status {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 10px;
+            margin-top: 16px;
+            padding: 14px 16px;
+            border-radius: 12px;
             font-size: 14px;
+            line-height: 1.6;
             display: none;
+            text-align: left;
         }
-        
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            display: block;
-        }
-        
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            display: block;
-        }
-        
-        .status.loading {
-            background: #fff3cd;
-            color: #856404;
-            display: block;
-        }
-        
+
+        .status.success { background: #e8f5e9; color: #2e7d32; display: block; }
+        .status.error   { background: #fdecea; color: #c62828; display: block; }
+        .status.loading { background: #fff8e1; color: #f57f17; display: block; }
+
         .spinner {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            width: 16px; height: 16px;
+            border: 2px solid rgba(245,127,23,0.3);
+            border-top-color: #f57f17;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 10px;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
             vertical-align: middle;
         }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
         .history {
-            margin-top: 30px;
-            padding-top: 30px;
-            border-top: 1px solid #eee;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #f0f0f0;
         }
-        
-        .history h3 {
-            color: #333;
-            font-size: 16px;
-            margin-bottom: 15px;
-        }
-        
+
+        .history h3 { color: #444; font-size: 14px; margin-bottom: 12px; text-align: left; }
+
         .history-item {
             display: flex;
             justify-content: space-between;
-            padding: 12px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            margin-bottom: 8px;
+            align-items: center;
+            padding: 10px 14px;
+            background: #f7f8fc;
+            border-radius: 10px;
+            margin-bottom: 7px;
             font-size: 13px;
         }
-        
-        .history-time {
-            color: #666;
-        }
-        
-        .history-type {
-            color: #667eea;
-            font-weight: 600;
-        }
+
+        .history-time { color: #666; }
+        .history-loc  { color: #667eea; font-weight: 600; }
+
+        .no-record { color: #aaa; font-size: 13px; text-align: center; padding: 12px 0; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="logo">📍</div>
-        <h1>執勤打卡系統</h1>
-        <p class="subtitle">請確認資訊後點擊打卡</p>
-        
-        <div class="info-box">
-            <div class="info-item">
-                <span class="info-label">員工姓名</span>
-                <span class="info-value" id="userName">載入中...</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">目前時間</span>
-                <span class="info-value" id="currentTime">--:--:--</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">執勤地點</span>
-                <span class="info-value" id="location">--</span>
-            </div>
+<div class="container">
+    <img class="avatar" id="avatar" alt="頭像">
+    <div class="logo" id="logoEmoji">📍</div>
+
+    <h1>執勤打卡系統</h1>
+    <p class="subtitle">請確認資訊後點擊打卡</p>
+
+    <div class="info-box">
+        <div class="info-item">
+            <span class="info-label">員工姓名</span>
+            <span class="info-value" id="userName">載入中...</span>
         </div>
-        
-        <button class="btn-checkin" id="checkinBtn" onclick="doCheckin()">
-            確認打卡
-        </button>
-        
-        <div class="status" id="status"></div>
-        
-        <div class="history" id="historySection" style="display: none;">
-            <h3>今日打卡紀錄</h3>
-            <div id="historyList"></div>
+        <div class="info-item">
+            <span class="info-label">目前時間</span>
+            <span class="info-value" id="currentTime">--:--:--</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">執勤地點</span>
+            <span class="info-value" id="location">--</span>
         </div>
     </div>
 
-    <script>
-        // ========== 設定區 ==========
-        const LIFF_ID = '2009407912-jzTn23cb';  // ← 改成你的 LIFF ID
-        const API_URL = '你的後端API網址';  // ← 改成你的後端網址（如果沒有後端，先留空）
-        // ===========================
-        
-        let userProfile = null;
-        let locationName = '食香園';
-        
-        // 初始化 LIFF
-        async function initLIFF() {
-            try {
-                await liff.init({ liffId: LIFF_ID });
-                
-                if (!liff.isLoggedIn()) {
-                    liff.login();
-                    return;
-                }
-                
-                // 取得使用者資訊
-                userProfile = await liff.getProfile();
-                document.getElementById('userName').textContent = userProfile.displayName;
-                
-                // 從 URL 取得執勤地點
-                const urlParams = new URLSearchParams(window.location.search);
-                locationName = urlParams.get('location') || '總部大樓';
-                document.getElementById('location').textContent = locationName;
-                
-                // 更新時間
-                updateTime();
-                setInterval(updateTime, 1000);
-                
-                // 載入今日紀錄（使用本地儲存）
-                loadTodayHistory();
-                
-            } catch (error) {
-                console.error('LIFF 初始化失敗:', error);
-                document.getElementById('userName').textContent = '無法載入';
-                showStatus('系統初始化失敗，請重新開啟', 'error');
+    <button class="btn-checkin" id="checkinBtn" onclick="doCheckin()">確認打卡</button>
+
+    <div class="status" id="status"></div>
+
+    <div class="history" id="historySection" style="display:none;">
+        <h3>📋 今日打卡紀錄</h3>
+        <div id="historyList"></div>
+    </div>
+</div>
+
+<script>
+    // =============================================
+    //  ⚙️  請修改以下設定
+    // =============================================
+    const CONFIG = {
+        LIFF_ID:  '2009407912-jzTn23cb',
+        API_URL:  '/api/checkin',        // Vercel Serverless Function
+        DEFAULT_LOCATION: '食香園'      // 預設地點名稱
+    };
+    // =============================================
+
+    let userProfile = null;
+
+    async function initLIFF() {
+        try {
+            await liff.init({ liffId: CONFIG.LIFF_ID });
+
+            if (!liff.isLoggedIn()) {
+                liff.login({ redirectUri: location.href });
+                return;
             }
-        }
-        
-        // 更新時間顯示
-        function updateTime() {
-            const now = new Date();
-            document.getElementById('currentTime').textContent = 
-                now.toLocaleTimeString('zh-TW');
-        }
-        
-        // 執行打卡
-        async function doCheckin() {
-            const btn = document.getElementById('checkinBtn');
-            btn.disabled = true;
-            showStatus('<span class="spinner"></span>處理中...', 'loading');
-            
-            const checkinData = {
-                userId: userProfile.userId,
-                userName: userProfile.displayName,
-                location: locationName,
-                timestamp: new Date().toISOString(),
-                type: 'checkin'
-            };
-            
-            // 儲存到本地
-            saveToHistory(checkinData);
-            
-            // 如果有後端 API，就發送過去
-            if (API_URL && API_URL !== '你的後端API網址') {
-                try {
-                    const response = await fetch(API_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(checkinData)
-                    });
-                    
-                    if (!response.ok) throw new Error('API 錯誤');
-                } catch (error) {
-                    console.log('後端同步失敗，僅本地儲存:', error);
-                }
+
+            userProfile = await liff.getProfile();
+
+            // 顯示頭像（替換 emoji logo）
+            const avatar = document.getElementById('avatar');
+            if (userProfile.pictureUrl) {
+                avatar.src = userProfile.pictureUrl;
+                avatar.style.display = 'block';
+                document.getElementById('logoEmoji').style.display = 'none';
             }
-            
-            // 顯示成功
-            showStatus(`✅ 打卡成功！<br>時間：${new Date().toLocaleString('zh-TW')}`, 'success');
+
+            document.getElementById('userName').textContent = userProfile.displayName;
+
+            // 地點從 URL 參數讀取：?location=食香園
+            const params = new URLSearchParams(location.search);
+            const loc = params.get('location') || CONFIG.DEFAULT_LOCATION;
+            document.getElementById('location').textContent = loc;
+
+            updateTime();
+            setInterval(updateTime, 1000);
             loadTodayHistory();
-            
-            // 關閉 LIFF（可選）
-            setTimeout(() => {
-                if (liff.isInClient()) {
-                    liff.closeWindow();
-                }
-            }, 2000);
+
+        } catch (err) {
+            console.error('LIFF init error:', err);
+            document.getElementById('userName').textContent = '無法載入';
+            showStatus('⚠️ 系統初始化失敗，請關閉後重新開啟', 'error');
         }
-        
-        // 顯示狀態訊息
-        function showStatus(message, type) {
-            const status = document.getElementById('status');
-            status.innerHTML = message;
-            status.className = 'status ' + type;
+    }
+
+    function updateTime() {
+        document.getElementById('currentTime').textContent =
+            new Date().toLocaleTimeString('zh-TW');
+    }
+
+    async function doCheckin() {
+        if (!userProfile) {
+            showStatus('⚠️ 尚未取得使用者資訊，請重新整理', 'error');
+            return;
         }
-        
-        // 儲存到本地歷史
-        function saveToHistory(data) {
-            const today = new Date().toDateString();
-            const key = `checkin_${today}_${data.userId}`;
-            let history = JSON.parse(localStorage.getItem(key) || '[]');
-            history.push(data);
-            localStorage.setItem(key, JSON.stringify(history));
-        }
-        
-        // 載入今日歷史
-        function loadTodayHistory() {
-            if (!userProfile) return;
-            
-            const today = new Date().toDateString();
-            const key = `checkin_${today}_${userProfile.userId}`;
-            const history = JSON.parse(localStorage.getItem(key) || '[]');
-            
-            if (history.length > 0) {
-                document.getElementById('historySection').style.display = 'block';
-                const list = document.getElementById('historyList');
-                list.innerHTML = history.slice(-5).reverse().map(item => `
-                    <div class="history-item">
-                        <span class="history-time">${new Date(item.timestamp).toLocaleTimeString('zh-TW')}</span>
-                        <span class="history-type">${item.location}</span>
-                    </div>
-                `).join('');
+
+        const btn = document.getElementById('checkinBtn');
+        btn.disabled = true;
+        showStatus('<span class="spinner"></span> 處理中...', 'loading');
+
+        const location = document.getElementById('location').textContent;
+        const now = new Date();
+
+        const record = {
+            userId:    userProfile.userId,
+            userName:  userProfile.displayName,
+            picture:   userProfile.pictureUrl || '',
+            location:  location,
+            timestamp: now.toISOString(),
+            type:      'checkin'
+        };
+
+        // 本地儲存
+        saveToHistory(record);
+
+        // 發送到後端 API（若有設定）
+        if (CONFIG.API_URL) {
+            try {
+                const res = await fetch(CONFIG.API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(record)
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            } catch (e) {
+                console.warn('後端同步失敗（僅本地儲存）:', e);
             }
         }
-        
-        // 啟動
-        initLIFF();
-    </script>
+
+        const timeStr = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const dateStr = now.toLocaleDateString('zh-TW');
+        showStatus(`✅ 打卡成功！<br>📅 ${dateStr}　⏰ ${timeStr}<br>📍 ${location}`, 'success');
+        loadTodayHistory();
+
+        // 2 秒後自動關閉 LIFF 視窗
+        setTimeout(() => {
+            if (liff.isInClient()) liff.closeWindow();
+            else btn.disabled = false;
+        }, 2500);
+    }
+
+    function showStatus(msg, type) {
+        const el = document.getElementById('status');
+        el.innerHTML = msg;
+        el.className = 'status ' + type;
+    }
+
+    function getStorageKey() {
+        const today = new Date().toDateString();
+        return `checkin_${today}_${userProfile?.userId || 'guest'}`;
+    }
+
+    function saveToHistory(data) {
+        try {
+            const key = getStorageKey();
+            const arr = JSON.parse(localStorage.getItem(key) || '[]');
+            arr.push(data);
+            localStorage.setItem(key, JSON.stringify(arr));
+        } catch(e) { console.warn('localStorage 寫入失敗', e); }
+    }
+
+    function loadTodayHistory() {
+        if (!userProfile) return;
+        try {
+            const arr = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
+            const section = document.getElementById('historySection');
+            const list    = document.getElementById('historyList');
+
+            if (arr.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+            list.innerHTML = arr.slice(-5).reverse().map(item => `
+                <div class="history-item">
+                    <span class="history-time">⏰ ${new Date(item.timestamp).toLocaleTimeString('zh-TW')}</span>
+                    <span class="history-loc">📍 ${item.location}</span>
+                </div>
+            `).join('');
+        } catch(e) { console.warn('歷史載入失敗', e); }
+    }
+
+    initLIFF();
+</script>
 </body>
 </html>
