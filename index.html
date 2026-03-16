@@ -8,7 +8,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -18,7 +17,6 @@
             align-items: center;
             padding: 20px;
         }
-
         .container {
             background: white;
             border-radius: 24px;
@@ -28,34 +26,25 @@
             box-shadow: 0 24px 64px rgba(0,0,0,0.25);
             text-align: center;
         }
-
         .logo {
-            width: 80px;
-            height: 80px;
+            width: 80px; height: 80px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 50%;
             margin: 0 auto 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
             font-size: 36px;
             box-shadow: 0 8px 24px rgba(102,126,234,0.4);
         }
-
         h1 { color: #1a1a2e; font-size: 24px; margin-bottom: 6px; font-weight: 700; }
-
         .subtitle { color: #888; font-size: 13px; margin-bottom: 28px; }
-
         .avatar {
-            width: 48px;
-            height: 48px;
+            width: 48px; height: 48px;
             border-radius: 50%;
             border: 2px solid #667eea;
             margin: 0 auto 8px;
             display: none;
             object-fit: cover;
         }
-
         .info-box {
             background: #f7f8fc;
             border-radius: 14px;
@@ -64,7 +53,6 @@
             text-align: left;
             border: 1px solid #edf0fb;
         }
-
         .info-item {
             display: flex;
             justify-content: space-between;
@@ -73,12 +61,9 @@
             font-size: 14px;
             border-bottom: 1px solid #eee;
         }
-
         .info-item:last-child { border-bottom: none; }
-
         .info-label { color: #888; }
         .info-value { color: #222; font-weight: 600; text-align: right; max-width: 60%; word-break: break-all; }
-
         .loc-select {
             width: 100%;
             padding: 8px 12px;
@@ -91,16 +76,13 @@
             color: #1f2937;
             outline: none;
         }
-        
         .loc-select:focus { border-color: #667eea; }
-
         .btn-group {
             display: flex;
             gap: 12px;
             width: 100%;
             margin-top: 10px;
         }
-
         .btn-checkin {
             flex: 1;
             padding: 16px 0;
@@ -113,12 +95,10 @@
             letter-spacing: 1px;
             transition: transform 0.15s, opacity 0.15s;
         }
-
         .btn-checkin.in { background: linear-gradient(135deg, #10b981 0%, #047857 100%); box-shadow: 0 6px 15px rgba(16,185,129,0.3); }
         .btn-checkin.out { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); box-shadow: 0 6px 15px rgba(245,158,11,0.3); }
         .btn-checkin:active:not(:disabled) { transform: scale(0.96); }
         .btn-checkin:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
-
         .status {
             margin-top: 16px;
             padding: 14px 16px;
@@ -128,11 +108,9 @@
             display: none;
             text-align: left;
         }
-
         .status.success { background: #e8f5e9; color: #2e7d32; display: block; }
         .status.error   { background: #fdecea; color: #c62828; display: block; }
         .status.loading { background: #fff8e1; color: #f57f17; display: block; }
-
         .spinner {
             display: inline-block;
             width: 16px; height: 16px;
@@ -143,17 +121,33 @@
             margin-right: 8px;
             vertical-align: middle;
         }
-
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* GPS 狀態標籤 */
+        .gps-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .gps-badge.checking { background: #fff8e1; color: #f57f17; }
+        .gps-badge.ok       { background: #e8f5e9; color: #2e7d32; }
+        .gps-badge.fail     { background: #fdecea; color: #c62828; }
     </style>
 </head>
 <body>
 <div class="container">
     <img class="avatar" id="avatar" alt="頭像">
     <div class="logo" id="logoEmoji">📍</div>
-
     <h1>執勤打卡系統</h1>
     <p class="subtitle">請確認資訊後點擊打卡</p>
+
+    <!-- GPS 狀態 -->
+    <div class="gps-badge checking" id="gpsBadge">📡 定位中...</div>
 
     <div class="info-box">
         <div class="info-item">
@@ -164,164 +158,248 @@
             <span class="info-label">目前時間</span>
             <span class="info-value" id="currentTime">--:--:--</span>
         </div>
-        
         <div class="info-item" id="fixedLocation">
             <span class="info-label">執勤地點</span>
             <span class="info-value" id="locationText" style="color: #667eea;">--</span>
         </div>
-
         <div class="info-item" id="manualLocation" style="display: none; flex-direction: column; align-items: flex-start;">
             <span class="info-label">請選擇執勤地點：</span>
             <select id="locSelect" class="loc-select">
-                <option value="食香園">食香園</option>
+                <option value="">載入中...</option>
             </select>
+        </div>
+        <div class="info-item" id="gpsDistItem" style="display:none;">
+            <span class="info-label">與打卡點距離</span>
+            <span class="info-value" id="gpsDist">--</span>
         </div>
     </div>
 
     <div class="btn-group">
-        <button class="btn-checkin in" id="checkinBtn" onclick="doCheckin('check_in')">上班打卡</button>
-        <button class="btn-checkin out" id="checkoutBtn" onclick="doCheckin('check_out')">下班打卡</button>
+        <button class="btn-checkin in"  id="checkinBtn"  onclick="doCheckin('check_in')"  disabled>上班打卡</button>
+        <button class="btn-checkin out" id="checkoutBtn" onclick="doCheckin('check_out')" disabled>下班打卡</button>
     </div>
-
     <div class="status" id="status"></div>
 </div>
 
 <script>
-    // =============================================
-    //  ⚙️  請修改以下設定
-    // =============================================
-    const CONFIG = {
-        LIFF_ID:  '2009407912-jzTn23cb',
-        
-        // ⚠️ Supabase 連線設定 (學長請務必填入您的真實資料)
-       SUPABASE_URL: 'https://wfyifbqnlpymxnhzbpct.supabase.co',
-SUPABASE_KEY: 'sb_publishable_s0VnRMtScjVs-ij-_nbkdw_JUi...'  
-    };
-    // =============================================
+// =============================================
+//  ⚙️ 設定區（填入你的資料）
+// =============================================
+const CONFIG = {
+    LIFF_ID:       '2009407912-jzTn23cb',
+    SUPABASE_URL: 'https://wfyifbqnlpymxnhzbpct.supabase.co',
+SUPABASE_KEY: 'sb_publishable_s0VnRMtScjVs-ij-_nbkdw_JUiFuWiU'  // 完整複製
+};
 
-    const supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+// ✅ 各地點的 GPS 座標與允許半徑（公尺）
+const LOCATION_COORDS = {
+    '南港': { lat: 25.0554, lng: 121.5894, radius: 400 },
+    '台科': { lat: 25.0119, lng: 121.5411, radius: 400 },
+    '台大': { lat: 25.0178, lng: 121.5401, radius: 400 },
+};
+// =============================================
 
-    let userProfile = null;
-    let isManual = false;
+const supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
 
-    async function initLIFF() {
-        try {
-            await liff.init({ liffId: CONFIG.LIFF_ID });
+let userProfile = null;
+let isManual = false;
+let userLat = null;
+let userLng = null;
+let gpsReady = false;
 
-            if (!liff.isLoggedIn()) {
-                liff.login({ redirectUri: location.href });
-                return;
-            }
+// 計算兩點距離（公尺）
+function calcDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
 
-            userProfile = await liff.getProfile();
+function getSelectedLocation() {
+    if (!isManual) return document.getElementById('locationText').textContent;
+    return document.getElementById('locSelect').value;
+}
 
-            const avatar = document.getElementById('avatar');
-            if (userProfile.pictureUrl) {
-                avatar.src = userProfile.pictureUrl;
-                avatar.style.display = 'block';
-                document.getElementById('logoEmoji').style.display = 'none';
-            }
+function checkGPS() {
+    const badge = document.getElementById('gpsBadge');
+    const distItem = document.getElementById('gpsDistItem');
+    const distEl = document.getElementById('gpsDist');
+    const locName = getSelectedLocation();
+    const locCoord = LOCATION_COORDS[locName];
 
-            document.getElementById('userName').textContent = userProfile.displayName;
+    if (!gpsReady) {
+        badge.className = 'gps-badge checking';
+        badge.textContent = '📡 定位中...';
+        setButtons(false);
+        return;
+    }
 
-            // 判斷是否有 QRCode 地點參數
-            const params = new URLSearchParams(location.search);
-            const locParam = params.get('location');
+    if (!locCoord) {
+        // 地點沒設定座標，允許打卡
+        badge.className = 'gps-badge ok';
+        badge.textContent = '✅ 位置確認';
+        setButtons(true);
+        return;
+    }
 
-            if (locParam) {
-                document.getElementById('locationText').textContent = locParam;
-                document.getElementById('manualLocation').style.display = 'none';
-            } else {
-                isManual = true;
-                document.getElementById('fixedLocation').style.display = 'none';
-                document.getElementById('manualLocation').style.display = 'flex';
+    const dist = Math.round(calcDistance(userLat, userLng, locCoord.lat, locCoord.lng));
+    distItem.style.display = 'flex';
+    distEl.textContent = dist + ' 公尺';
 
-                // 嘗試從資料庫撈取 locations 表格的資料
-                try {
-                    const { data } = await supabase.from('locations').select('name');
-                    if (data && data.length > 0) {
-                        const sel = document.getElementById('locSelect');
-                        sel.innerHTML = ''; 
-                        data.forEach(d => {
-                            const opt = document.createElement('option');
-                            opt.value = d.name;
-                            opt.textContent = d.name;
-                            sel.appendChild(opt);
-                        });
-                    }
-                } catch (e) { console.warn('載入地點選項失敗', e); }
-            }
+    if (dist <= locCoord.radius) {
+        badge.className = 'gps-badge ok';
+        badge.textContent = '✅ 位置確認（' + dist + 'm）';
+        distEl.style.color = '#2e7d32';
+        setButtons(true);
+    } else {
+        badge.className = 'gps-badge fail';
+        badge.textContent = '❌ 不在打卡範圍內（' + dist + 'm）';
+        distEl.style.color = '#c62828';
+        setButtons(false);
+    }
+}
 
-            updateTime();
-            setInterval(updateTime, 1000);
+function setButtons(enabled) {
+    document.getElementById('checkinBtn').disabled = !enabled;
+    document.getElementById('checkoutBtn').disabled = !enabled;
+}
 
-        } catch (err) {
-            console.error('LIFF init error:', err);
-            document.getElementById('userName').textContent = '無法載入';
-            showStatus('⚠️ 系統初始化失敗，請重新開啟', 'error');
+function startGPS() {
+    if (!navigator.geolocation) {
+        document.getElementById('gpsBadge').className = 'gps-badge fail';
+        document.getElementById('gpsBadge').textContent = '⚠️ 裝置不支援定位';
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            userLat = pos.coords.latitude;
+            userLng = pos.coords.longitude;
+            gpsReady = true;
+            checkGPS();
+        },
+        err => {
+            document.getElementById('gpsBadge').className = 'gps-badge fail';
+            document.getElementById('gpsBadge').textContent = '⚠️ 定位失敗，請開啟位置權限';
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+}
+
+async function initLIFF() {
+    try {
+        await liff.init({ liffId: CONFIG.LIFF_ID });
+        if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+
+        userProfile = await liff.getProfile();
+        const avatar = document.getElementById('avatar');
+        if (userProfile.pictureUrl) {
+            avatar.src = userProfile.pictureUrl;
+            avatar.style.display = 'block';
+            document.getElementById('logoEmoji').style.display = 'none';
+        }
+        document.getElementById('userName').textContent = userProfile.displayName;
+
+        const params = new URLSearchParams(location.search);
+        const locParam = params.get('location');
+
+        if (locParam) {
+            document.getElementById('locationText').textContent = locParam;
+            document.getElementById('manualLocation').style.display = 'none';
+        } else {
+            isManual = true;
+            document.getElementById('fixedLocation').style.display = 'none';
+            document.getElementById('manualLocation').style.display = 'flex';
+            try {
+                const { data } = await supabase.from('locations').select('name').order('name');
+                if (data && data.length > 0) {
+                    const sel = document.getElementById('locSelect');
+                    sel.innerHTML = '';
+                    data.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.name; opt.textContent = d.name;
+                        sel.appendChild(opt);
+                    });
+                    sel.addEventListener('change', checkGPS);
+                }
+            } catch(e) { console.warn('載入地點失敗', e); }
+        }
+
+        updateTime();
+        setInterval(updateTime, 1000);
+        startGPS();
+
+    } catch (err) {
+        console.error('LIFF init error:', err);
+        document.getElementById('userName').textContent = '無法載入';
+        showStatus('⚠️ 系統初始化失敗，請重新開啟', 'error');
+    }
+}
+
+function updateTime() {
+    document.getElementById('currentTime').textContent = new Date().toLocaleTimeString('zh-TW');
+}
+
+function showStatus(msg, type) {
+    const el = document.getElementById('status');
+    el.innerHTML = msg;
+    el.className = 'status ' + type;
+}
+
+async function doCheckin(recordType) {
+    if (!userProfile) { showStatus('⚠️ 尚未取得使用者資訊，請重新整理', 'error'); return; }
+
+    // 再次驗證距離
+    const locName = getSelectedLocation();
+    const locCoord = LOCATION_COORDS[locName];
+    if (locCoord && gpsReady) {
+        const dist = Math.round(calcDistance(userLat, userLng, locCoord.lat, locCoord.lng));
+        if (dist > locCoord.radius) {
+            showStatus(`❌ 打卡失敗：您距離打卡地點 ${dist} 公尺，超出允許範圍（${locCoord.radius} 公尺）`, 'error');
+            return;
         }
     }
 
-    function updateTime() {
-        document.getElementById('currentTime').textContent = new Date().toLocaleTimeString('zh-TW');
-    }
+    setButtons(false);
+    showStatus('<span class="spinner"></span> 處理中...', 'loading');
 
-    async function doCheckin(recordType) {
-        if (!userProfile) {
-            showStatus('⚠️ 尚未取得使用者資訊，請重新整理', 'error');
+    const finalLocation = locName;
+    const now = new Date();
+
+    try {
+        const { data: empData, error: empError } = await supabase
+            .from('employees').select('id')
+            .eq('line_user_id', userProfile.userId).single();
+
+        if (empError || !empData) {
+            showStatus('⚠️ 打卡失敗：找不到您的員工資料，請聯絡管理員。', 'error');
+            setButtons(true);
             return;
         }
 
-        const btnIn = document.getElementById('checkinBtn');
-        const btnOut = document.getElementById('checkoutBtn');
-        btnIn.disabled = true;
-        btnOut.disabled = true;
-        showStatus('<span class="spinner"></span> 處理中...', 'loading');
+        const { error: insertError } = await supabase.from('attendance_records').insert([{
+            employee_id: empData.id,
+            record_type: recordType,
+            location: finalLocation,
+            timestamp: now.toISOString()
+        }]);
 
-        // 取得地點
-        const finalLocation = isManual 
-            ? document.getElementById('locSelect').value 
-            : document.getElementById('locationText').textContent;
-            
-        const now = new Date();
+        if (insertError) throw insertError;
 
-        try {
-            // 1. 先從 employees 表格尋找該 LINE 使用者的 employee_id (UUID)
-            const { data: empData, error: empError } = await supabase
-                .from('employees')
-                .select('id')
-                .eq('line_user_id', userProfile.userId)
-                .single();
+        const typeLabel = recordType === 'check_in' ? '上班' : '下班';
+        const timeStr = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        showStatus(`✅ ${typeLabel}打卡成功！<br>⏰ 時間：${timeStr}<br>📍 地點：${finalLocation}`, 'success');
 
-            if (empError || !empData) {
-                showStatus('⚠️ 打卡失敗：找不到您的員工資料，請聯絡管理員先在後台新增員工並綁定。', 'error');
-                btnIn.disabled = false;
-                btnOut.disabled = false;
-                return;
-            }
+        setTimeout(() => { if (liff.isInClient()) liff.closeWindow(); }, 2500);
 
-            // 2. 寫入與後台完美對接的 attendance_records 表格
-            const { error: insertError } = await supabase
-                .from('attendance_records')
-                .insert([
-                    { 
-                        employee_id: empData.id, 
-                        record_type: recordType, 
-                        location: finalLocation, 
-                        timestamp: now.toISOString()
-                    }
-                ]);
+    } catch (error) {
+        console.error('打卡錯誤:', error);
+        showStatus('❌ 打卡失敗：' + error.message, 'error');
+        setButtons(true);
+    }
+}
 
-            if (insertError) throw insertError;
-
-            const typeLabel = recordType === 'check_in' ? '上班' : '下班';
-            const timeStr = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            showStatus(`✅ ${typeLabel}打卡成功！<br>⏰ 時間：${timeStr}<br>📍 地點：${finalLocation}`, 'success');
-
-            // 2 秒後自動關閉 LIFF 視窗
-            setTimeout(() => {
-                if (liff.isInClient()) liff.closeWindow();
-            }, 2500);
-
-        } catch (error) {
-            console.
+initLIFF();
+</script>
+</body>
+</html>
