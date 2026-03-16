@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>員工執勤打卡</title>
+    <script src="https://static.line-scdn.net/liff/edge/2.1/sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 24px;
+            padding: 36px 28px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.25);
+            text-align: center;
+        }
+        .logo {
+            width: 80px; height: 80px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 36px;
+            box-shadow: 0 8px 24px rgba(102,126,234,0.4);
+        }
+        h1 { color: #1a1a2e; font-size: 24px; margin-bottom: 6px; font-weight: 700; }
+        .subtitle { color: #888; font-size: 13px; margin-bottom: 28px; }
+        .avatar {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            border: 2px solid #667eea;
+            margin: 0 auto 8px;
+            display: none;
+            object-fit: cover;
+        }
+        .info-box {
+            background: #f7f8fc;
+            border-radius: 14px;
+            padding: 18px 20px;
+            margin-bottom: 20px;
+            text-align: left;
+            border: 1px solid #edf0fb;
+        }
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            font-size: 14px;
+            border-bottom: 1px solid #eee;
+        }
+        .info-item:last-child { border-bottom: none; }
+        .info-label { color: #888; }
+        .info-value { color: #222; font-weight: 600; text-align: right; max-width: 60%; word-break: break-all; }
+        .loc-select {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            font-size: 15px;
+            margin-top: 8px;
+            background-color: white;
+            font-family: inherit;
+            color: #1f2937;
+            outline: none;
+        }
+        .loc-select:focus { border-color: #667eea; }
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn-checkin {
+            flex: 1;
+            padding: 16px 0;
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: transform 0.15s, opacity 0.15s;
+        }
+        .btn-checkin.in  { background: linear-gradient(135deg, #10b981 0%, #047857 100%); box-shadow: 0 6px 15px rgba(16,185,129,0.3); }
+        .btn-checkin.out { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); box-shadow: 0 6px 15px rgba(245,158,11,0.3); }
+        .btn-checkin:active:not(:disabled) { transform: scale(0.96); }
+        .btn-checkin:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
+        .status {
+            margin-top: 16px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            display: none;
+            text-align: left;
+        }
+        .status.success { background: #e8f5e9; color: #2e7d32; display: block; }
+        .status.error   { background: #fdecea; color: #c62828; display: block; }
+        .status.loading { background: #fff8e1; color: #f57f17; display: block; }
+        .spinner {
+            display: inline-block;
+            width: 16px; height: 16px;
+            border: 2px solid rgba(245,127,23,0.3);
+            border-top-color: #f57f17;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <img class="avatar" id="avatar" alt="頭像">
+    <div class="logo" id="logoEmoji">📍</div>
+    <h1>執勤打卡系統</h1>
+    <p class="subtitle">請確認資訊後點擊打卡</p>
+
+    <div class="info-box">
+        <div class="info-item">
+            <span class="info-label">員工姓名</span>
+            <span class="info-value" id="userName">載入中...</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">目前時間</span>
+            <span class="info-value" id="currentTime">--:--:--</span>
+        </div>
+        <div class="info-item" id="fixedLocation">
+            <span class="info-label">執勤地點</span>
+            <span class="info-value" id="locationText" style="color: #667eea;">--</span>
+        </div>
+        <div class="info-item" id="manualLocation" style="display: none; flex-direction: column; align-items: flex-start;">
+            <span class="info-label">請選擇執勤地點：</span>
+            <select id="locSelect" class="loc-select">
+                <option value="">載入中...</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="btn-group">
+        <button class="btn-checkin in"  id="checkinBtn"  onclick="doCheckin('check_in')">上班打卡</button>
+        <button class="btn-checkin out" id="checkoutBtn" onclick="doCheckin('check_out')">下班打卡</button>
+    </div>
+    <div class="status" id="status"></div>
+</div>
+
+<script>
+const CONFIG = {
+    LIFF_ID:      '2009407912-jzTn23cb',
+    SUPABASE_URL: 'https://wfyifbqnlpymxnhzbpct.supabase.co',
+    SUPABASE_KEY: '請貼上你的_anon_key'
+};
+
+const supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+
+let userProfile = null;
+let isManual = false;
+
+async function initLIFF() {
+    try {
+        await liff.init({ liffId: CONFIG.LIFF_ID });
+        if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+
+        userProfile = await liff.getProfile();
+        const avatar = document.getElementById('avatar');
+        if (userProfile.pictureUrl) {
+            avatar.src = userProfile.pictureUrl;
+            avatar.style.display = 'block';
+            document.getElementById('logoEmoji').style.display = 'none';
+        }
+        document.getElementById('userName').textContent = userProfile.displayName;
+
+        const params = new URLSearchParams(location.search);
+        const locParam = params.get('location');
+
+        if (locParam) {
+            document.getElementById('locationText').textContent = locParam;
+            document.getElementById('manualLocation').style.display = 'none';
+        } else {
+            isManual = true;
+            document.getElementById('fixedLocation').style.display = 'none';
+            document.getElementById('manualLocation').style.display = 'flex';
+            try {
+                const { data } = await supabase.from('locations').select('name').order('name');
+                if (data && data.length > 0) {
+                    const sel = document.getElementById('locSelect');
+                    sel.innerHTML = '';
+                    data.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.name; opt.textContent = d.name;
+                        sel.appendChild(opt);
+                    });
+                }
+            } catch(e) { console.warn('載入地點失敗', e); }
+        }
+
+        updateTime();
+        setInterval(updateTime, 1000);
+
+    } catch (err) {
+        console.error('LIFF init error:', err);
+        document.getElementById('userName').textContent = '無法載入';
+        showStatus('⚠️ 系統初始化失敗，請重新開啟', 'error');
+    }
+}
+
+function updateTime() {
+    document.getElementById('currentTime').textContent = new Date().toLocaleTimeString('zh-TW');
+}
+
+function showStatus(msg, type) {
+    const el = document.getElementById('status');
+    el.innerHTML = msg;
+    el.className = 'status ' + type;
+}
+
+async function doCheckin(recordType) {
+    if (!userProfile) { showStatus('⚠️ 尚未取得使用者資訊，請重新整理', 'error'); return; }
+
+    const btnIn  = document.getElementById('checkinBtn');
+    const btnOut = document.getElementById('checkoutBtn');
+    btnIn.disabled = true;
+    btnOut.disabled = true;
+    showStatus('<span class="spinner"></span> 處理中...', 'loading');
+
+    const finalLocation = isManual
+        ? document.getElementById('locSelect').value
+        : document.getElementById('locationText').textContent;
+    const now = new Date();
+
+    try {
+        const { data: empData, error: empError } = await supabase
+            .from('employees').select('id')
+            .eq('line_user_id', userProfile.userId).single();
+
+        if (empError || !empData) {
+            showStatus('⚠️ 打卡失敗：找不到您的員工資料，請聯絡管理員。', 'error');
+            btnIn.disabled = false;
+            btnOut.disabled = false;
+            return;
+        }
+
+        const { error: insertError } = await supabase.from('attendance_records').insert([{
+            employee_id: empData.id,
+            record_type: recordType,
+            location: finalLocation,
+            timestamp: now.toISOString()
+        }]);
+
+        if (insertError) throw insertError;
+
+        const typeLabel = recordType === 'check_in' ? '上班' : '下班';
+        const timeStr = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        showStatus(`✅ ${typeLabel}打卡成功！<br>⏰ 時間：${timeStr}<br>📍 地點：${finalLocation}`, 'success');
+
+        setTimeout(() => { if (liff.isInClient()) liff.closeWindow(); }, 2500);
+
+    } catch (error) {
+        console.error('打卡錯誤:', error);
+        showStatus('❌ 打卡失敗：' + error.message, 'error');
+        btnIn.disabled = false;
+        btnOut.disabled = false;
+    }
+}
+
+initLIFF();
+</script>
+</body>
+</html>
