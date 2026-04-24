@@ -170,6 +170,34 @@ const supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABA
 
 let userProfile = null;
 let isManual = false;
+let cachedEmpId = null;
+
+async function checkTodayStatus(empId) {
+    try {
+        // 用台灣時區算今天的日期字串，再轉成 UTC ISO 字串給 Supabase 比對
+        const todayTW  = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date());
+        const startUTC = new Date(todayTW + 'T00:00:00+08:00').toISOString();
+        const endUTC   = new Date(todayTW + 'T23:59:59+08:00').toISOString();
+
+        const { data, error } = await supabase
+            .from('attendance_records')
+            .select('record_type')
+            .eq('employee_id', empId)
+            .gte('timestamp', startUTC)
+            .lte('timestamp', endUTC);
+
+        if (error || !data || data.length === 0) return;
+
+        if (data.some(r => r.record_type === 'check_in')) {
+            const b = document.getElementById('checkinBtn');
+            b.textContent = '已上班打卡'; b.disabled = true;
+        }
+        if (data.some(r => r.record_type === 'check_out')) {
+            const b = document.getElementById('checkoutBtn');
+            b.textContent = '已下班打卡'; b.disabled = true;
+        }
+    } catch(e) { console.warn('今日狀態查詢失敗', e); }
+}
 
 async function initLIFF() {
     try {
@@ -184,6 +212,11 @@ async function initLIFF() {
             document.getElementById('logoEmoji').style.display = 'none';
         }
         document.getElementById('userName').textContent = userProfile.displayName;
+
+        const { data: emp } = await supabase
+            .from('employees').select('id')
+            .eq('line_user_id', userProfile.userId).maybeSingle();
+        if (emp) { cachedEmpId = emp.id; await checkTodayStatus(emp.id); }
 
         const params = new URLSearchParams(location.search);
         const locParam = params.get('location');
@@ -244,11 +277,7 @@ async function doCheckin(recordType) {
     const now = new Date();
 
     try {
-        const { data: empData, error: empError } = await supabase
-            .from('employees').select('id')
-            .eq('line_user_id', userProfile.userId).single();
-
-        if (empError || !empData) {
+        if (!cachedEmpId) {
             showStatus('⚠️ 打卡失敗：找不到您的員工資料，請聯絡管理員。', 'error');
             btnIn.disabled = false;
             btnOut.disabled = false;
@@ -256,7 +285,7 @@ async function doCheckin(recordType) {
         }
 
         const { error: insertError } = await supabase.from('attendance_records').insert([{
-            employee_id: empData.id,
+            employee_id: cachedEmpId,
             record_type: recordType,
             location: finalLocation,
             timestamp: now.toISOString()
