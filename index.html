@@ -268,6 +268,17 @@ async function doCheckin(recordType) {
         const timeStr = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         showStatus(`✅ ${typeLabel}打卡成功！<br>⏰ 時間：${timeStr}<br>📍 地點：${finalLocation}`, 'success');
 
+        if (liff.isInClient()) {
+            try {
+                await liff.sendMessages([{
+                    type: 'text',
+                    text: `✅ ${userProfile.displayName} ${typeLabel}打卡成功！\n⏰ 時間：${timeStr}\n📍 地點：${finalLocation}`
+                }]);
+            } catch(e) {
+                console.warn('LINE 訊息傳送失敗:', e);
+            }
+        }
+
         setTimeout(() => { if (liff.isInClient()) liff.closeWindow(); }, 2500);
 
     } catch (error) {
