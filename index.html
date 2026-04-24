@@ -172,31 +172,43 @@ let userProfile = null;
 let isManual = false;
 let cachedEmpId = null;
 
+function toTaiwanDateStr(date) {
+    // 加 8 小時轉台灣時間，取 YYYY-MM-DD
+    return new Date(date.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 async function checkTodayStatus(empId) {
     try {
-        // 用台灣時區算今天的日期字串，再轉成 UTC ISO 字串給 Supabase 比對
-        const todayTW  = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date());
-        const startUTC = new Date(todayTW + 'T00:00:00+08:00').toISOString();
-        const endUTC   = new Date(todayTW + 'T23:59:59+08:00').toISOString();
-
         const { data, error } = await supabase
             .from('attendance_records')
-            .select('record_type')
+            .select('record_type, timestamp')
             .eq('employee_id', empId)
-            .gte('timestamp', startUTC)
-            .lte('timestamp', endUTC);
+            .order('timestamp', { ascending: false })
+            .limit(20);
+
+        const todayTW = toTaiwanDateStr(new Date());
+        let dbg = `[除錯] 今日台灣日期: ${todayTW}<br>`;
+        dbg += `員工ID: ${empId}<br>`;
+        dbg += `錯誤: ${error ? JSON.stringify(error) : '無'}<br>`;
+        dbg += `抓到筆數: ${data ? data.length : 0}<br>`;
+        if (data) data.forEach(r => {
+            dbg += `→ ${r.record_type} | 台灣日: ${toTaiwanDateStr(new Date(r.timestamp))} | 原始: ${r.timestamp}<br>`;
+        });
+        showStatus(dbg, 'loading');
 
         if (error || !data || data.length === 0) return;
 
-        if (data.some(r => r.record_type === 'check_in')) {
+        const todayRecords = data.filter(r => toTaiwanDateStr(new Date(r.timestamp)) === todayTW);
+
+        if (todayRecords.some(r => r.record_type === 'check_in')) {
             const b = document.getElementById('checkinBtn');
             b.textContent = '已上班打卡'; b.disabled = true;
         }
-        if (data.some(r => r.record_type === 'check_out')) {
+        if (todayRecords.some(r => r.record_type === 'check_out')) {
             const b = document.getElementById('checkoutBtn');
             b.textContent = '已下班打卡'; b.disabled = true;
         }
-    } catch(e) { console.warn('今日狀態查詢失敗', e); }
+    } catch(e) { showStatus('[錯誤] ' + e.message, 'error'); }
 }
 
 async function initLIFF() {
