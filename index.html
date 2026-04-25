@@ -172,38 +172,33 @@ let userProfile = null;
 let isManual = false;
 let cachedEmpId = null;
 
-function toTaiwanDateStr(date) {
-    // 加 8 小時轉台灣時間，取 YYYY-MM-DD
-    return new Date(date.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
-
 async function checkTodayStatus(empId) {
     try {
         const { data, error } = await supabase
             .from('attendance_records')
-            .select('record_type, timestamp')
+            .select('record_type')
             .eq('employee_id', empId)
             .order('timestamp', { ascending: false })
-            .limit(20);
+            .limit(1);
 
-        if (error || !data || data.length === 0) return;
+        if (error || !data || data.length === 0) {
+            // 沒有任何紀錄 → 鎖下班（未上班不能下班）
+            const bo = document.getElementById('checkoutBtn');
+            bo.textContent = '請先上班打卡'; bo.disabled = true;
+            return;
+        }
 
-        // 只看今天（台灣時區）的紀錄，取最後一筆判斷狀態
-        const todayTW = toTaiwanDateStr(new Date());
-        const todayRecords = data.filter(r => toTaiwanDateStr(new Date(r.timestamp)) === todayTW);
-        if (todayRecords.length === 0) return;
-
-        const last = todayRecords[0]; // 已按時間降冪，第一筆是最新的
+        const last = data[0];
         if (last.record_type === 'check_in') {
-            // 最後狀態是上班打卡 → 鎖上班、開下班
+            // 有未下班的狀態 → 鎖上班、開下班
             const bi = document.getElementById('checkinBtn');
             bi.textContent = '已上班打卡'; bi.disabled = true;
-        } else if (last.record_type === 'check_out') {
-            // 最後狀態是下班打卡 → 鎖下班、開上班
+        } else {
+            // 最新是 check_out → 可再上班，鎖下班
             const bo = document.getElementById('checkoutBtn');
-            bo.textContent = '已下班打卡'; bo.disabled = true;
+            bo.textContent = '請先上班打卡'; bo.disabled = true;
         }
-    } catch(e) { console.warn('今日狀態查詢失敗', e); }
+    } catch(e) { console.warn('狀態查詢失敗', e); }
 }
 
 async function initLIFF() {
