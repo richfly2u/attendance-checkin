@@ -186,29 +186,24 @@ async function checkTodayStatus(empId) {
             .order('timestamp', { ascending: false })
             .limit(20);
 
-        const todayTW = toTaiwanDateStr(new Date());
-        let dbg = `[除錯] 今日台灣日期: ${todayTW}<br>`;
-        dbg += `員工ID: ${empId}<br>`;
-        dbg += `錯誤: ${error ? JSON.stringify(error) : '無'}<br>`;
-        dbg += `抓到筆數: ${data ? data.length : 0}<br>`;
-        if (data) data.forEach(r => {
-            dbg += `→ ${r.record_type} | 台灣日: ${toTaiwanDateStr(new Date(r.timestamp))} | 原始: ${r.timestamp}<br>`;
-        });
-        showStatus(dbg, 'loading');
-
         if (error || !data || data.length === 0) return;
 
+        // 只看今天（台灣時區）的紀錄，取最後一筆判斷狀態
+        const todayTW = toTaiwanDateStr(new Date());
         const todayRecords = data.filter(r => toTaiwanDateStr(new Date(r.timestamp)) === todayTW);
+        if (todayRecords.length === 0) return;
 
-        if (todayRecords.some(r => r.record_type === 'check_in')) {
-            const b = document.getElementById('checkinBtn');
-            b.textContent = '已上班打卡'; b.disabled = true;
+        const last = todayRecords[0]; // 已按時間降冪，第一筆是最新的
+        if (last.record_type === 'check_in') {
+            // 最後狀態是上班打卡 → 鎖上班、開下班
+            const bi = document.getElementById('checkinBtn');
+            bi.textContent = '已上班打卡'; bi.disabled = true;
+        } else if (last.record_type === 'check_out') {
+            // 最後狀態是下班打卡 → 鎖下班、開上班
+            const bo = document.getElementById('checkoutBtn');
+            bo.textContent = '已下班打卡'; bo.disabled = true;
         }
-        if (todayRecords.some(r => r.record_type === 'check_out')) {
-            const b = document.getElementById('checkoutBtn');
-            b.textContent = '已下班打卡'; b.disabled = true;
-        }
-    } catch(e) { showStatus('[錯誤] ' + e.message, 'error'); }
+    } catch(e) { console.warn('今日狀態查詢失敗', e); }
 }
 
 async function initLIFF() {
