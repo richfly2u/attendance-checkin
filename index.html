@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>員工執勤打卡</title>
+    <script>
+        // 強制 LINE WebView 每次載入最新版（cache bust）
+        (function() {
+            if (location.search.indexOf('_cb=') === -1) {
+                var sep = location.search ? '&' : '?';
+                location.replace(location.href + sep + '_cb=' + Date.now());
+            }
+        })();
+    </script>
     <script src="https://static.line-scdn.net/liff/edge/2.1/sdk.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
