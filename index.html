@@ -172,30 +172,37 @@ let userProfile = null;
 let isManual = false;
 let cachedEmpId = null;
 
+function getTaiwanDateStr(date) {
+    return new Date(date.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 async function checkTodayStatus(empId) {
     try {
         const { data, error } = await supabase
             .from('attendance_records')
-            .select('record_type')
+            .select('record_type, timestamp')
             .eq('employee_id', empId)
             .order('timestamp', { ascending: false })
             .limit(1);
 
+        const bo = document.getElementById('checkoutBtn');
+        const bi = document.getElementById('checkinBtn');
+
         if (error || !data || data.length === 0) {
-            // 沒有任何紀錄 → 鎖下班（未上班不能下班）
-            const bo = document.getElementById('checkoutBtn');
             bo.textContent = '請先上班打卡'; bo.disabled = true;
             return;
         }
 
         const last = data[0];
-        if (last.record_type === 'check_in') {
-            // 有未下班的狀態 → 鎖上班、開下班
-            const bi = document.getElementById('checkinBtn');
+        const todayTW   = getTaiwanDateStr(new Date());
+        const lastDateTW = getTaiwanDateStr(new Date(last.timestamp));
+        const isToday   = (todayTW === lastDateTW);
+
+        if (last.record_type === 'check_in' && isToday) {
+            // 今天已上班且未下班 → 鎖上班、開下班
             bi.textContent = '已上班打卡'; bi.disabled = true;
         } else {
-            // 最新是 check_out → 可再上班，鎖下班
-            const bo = document.getElementById('checkoutBtn');
+            // 昨天忘打下班卡 或 最新是 check_out → 可再上班，鎖下班
             bo.textContent = '請先上班打卡'; bo.disabled = true;
         }
     } catch(e) { console.warn('狀態查詢失敗', e); }
