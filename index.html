@@ -304,6 +304,15 @@ async function doCheckin(recordType) {
         const timeStr = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         showStatus(`✅ ${typeLabel}打卡成功！<br>⏰ 時間：${timeStr}<br>📍 地點：${finalLocation}`, 'success');
 
+        // 打卡成功後更新按鈕狀態（只鎖剛用過的，另一個開放）
+        if (recordType === 'check_in') {
+            btnIn.textContent = '已上班打卡'; btnIn.disabled = true;
+            btnOut.textContent = '下班打卡';  btnOut.disabled = false;
+        } else {
+            btnOut.textContent = '已下班打卡'; btnOut.disabled = true;
+            btnIn.textContent = '上班打卡';   btnIn.disabled = false;
+        }
+
         if (liff.isInClient()) {
             try {
                 await liff.sendMessages([{
