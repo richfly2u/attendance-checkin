@@ -188,24 +188,35 @@ async function checkTodayStatus(empId) {
         const bo = document.getElementById('checkoutBtn');
         const bi = document.getElementById('checkinBtn');
 
-        if (error || !data || data.length === 0) {
+        if (error) {
+            showStatus('⚠️ 狀態查詢失敗: ' + (error.message || JSON.stringify(error)), 'error');
+            bi.textContent = '上班打卡'; bi.disabled = false;
+            bo.textContent = '請先上班打卡'; bo.disabled = true;
+            return;
+        }
+
+        if (!data || data.length === 0) {
+            // 無任何紀錄 → 可上班，鎖下班
+            bi.textContent = '上班打卡';      bi.disabled = false;
             bo.textContent = '請先上班打卡'; bo.disabled = true;
             return;
         }
 
         const last = data[0];
-        const todayTW   = getTaiwanDateStr(new Date());
+        const todayTW    = getTaiwanDateStr(new Date());
         const lastDateTW = getTaiwanDateStr(new Date(last.timestamp));
-        const isToday   = (todayTW === lastDateTW);
+        const isToday    = (todayTW === lastDateTW);
 
         if (last.record_type === 'check_in' && isToday) {
-            // 今天已上班且未下班 → 鎖上班、開下班
+            // 今天有未關閉班次 → 鎖上班，開下班
             bi.textContent = '已上班打卡'; bi.disabled = true;
+            bo.textContent = '下班打卡';   bo.disabled = false;
         } else {
-            // 昨天忘打下班卡 或 最新是 check_out → 可再上班，鎖下班
+            // 昨天忘退班 或 最後是 check_out → 開上班，鎖下班
+            bi.textContent = '上班打卡';      bi.disabled = false;
             bo.textContent = '請先上班打卡'; bo.disabled = true;
         }
-    } catch(e) { console.warn('狀態查詢失敗', e); }
+    } catch(e) { showStatus('⚠️ 例外: ' + e.message, 'error'); }
 }
 
 async function initLIFF() {
