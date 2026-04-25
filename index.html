@@ -130,6 +130,7 @@
     <div class="logo" id="logoEmoji">📍</div>
     <h1>執勤打卡系統</h1>
     <p class="subtitle">請確認資訊後點擊打卡</p>
+    <p style="font-size:10px;color:#bbb;">v2025-04-25c</p>
 
     <div class="info-box">
         <div class="info-item">
@@ -196,7 +197,7 @@ async function checkTodayStatus(empId) {
         }
 
         if (!data || data.length === 0) {
-            // 無任何紀錄 → 可上班，鎖下班
+            showStatus('📋 查無紀錄 → 可上班打卡', 'success');
             bi.textContent = '上班打卡';      bi.disabled = false;
             bo.textContent = '請先上班打卡'; bo.disabled = true;
             return;
@@ -207,12 +208,12 @@ async function checkTodayStatus(empId) {
         const lastDateTW = getTaiwanDateStr(new Date(last.timestamp));
         const isToday    = (todayTW === lastDateTW);
 
+        showStatus(`📋 最後紀錄：${last.record_type}（${lastDateTW}）今天：${todayTW}`, 'loading');
+
         if (last.record_type === 'check_in' && isToday) {
-            // 今天有未關閉班次 → 鎖上班，開下班
             bi.textContent = '已上班打卡'; bi.disabled = true;
             bo.textContent = '下班打卡';   bo.disabled = false;
         } else {
-            // 昨天忘退班 或 最後是 check_out → 開上班，鎖下班
             bi.textContent = '上班打卡';      bi.disabled = false;
             bo.textContent = '請先上班打卡'; bo.disabled = true;
         }
@@ -233,10 +234,17 @@ async function initLIFF() {
         }
         document.getElementById('userName').textContent = userProfile.displayName;
 
-        const { data: emp } = await supabase
+        const { data: emp, error: empErr } = await supabase
             .from('employees').select('id')
             .eq('line_user_id', userProfile.userId).maybeSingle();
-        if (emp) { cachedEmpId = emp.id; await checkTodayStatus(emp.id); }
+        if (empErr) {
+            showStatus('⚠️ 員工查詢錯誤: ' + empErr.message, 'error');
+        } else if (!emp) {
+            showStatus('⚠️ 找不到員工資料（LINE ID 未綁定），請聯絡管理員', 'error');
+        } else {
+            cachedEmpId = emp.id;
+            await checkTodayStatus(emp.id);
+        }
 
         const params = new URLSearchParams(location.search);
         const locParam = params.get('location');
